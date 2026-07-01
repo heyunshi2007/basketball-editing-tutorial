@@ -115,13 +115,24 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans 
 .food-card-info .food-restaurant { font-size: 0.85rem; color: var(--accent); margin-bottom: 0.3rem; }
 .food-card-info .food-price { font-size: 0.8rem; color: var(--muted); }
 
-.hotel-table-wrap { background: #fff; border-radius: var(--radius); box-shadow: var(--card-shadow); overflow: hidden; }
-.hotel-table { width: 100%; border-collapse: collapse; }
-.hotel-table thead { background: var(--accent); color: #fff; }
-.hotel-table th { padding: 1rem 1.2rem; text-align: left; font-size: 0.9rem; font-weight: 600; }
-.hotel-table td { padding: 0.9rem 1.2rem; font-size: 0.9rem; border-bottom: 1px solid var(--rule); }
-.hotel-table tbody tr:hover { background: var(--accent-light); }
-.hotel-table .price { color: var(--accent); font-weight: 700; }
+.hotel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.2rem; }
+.hotel-card { background: #fff; border-radius: var(--radius); overflow: hidden; box-shadow: var(--card-shadow); transition: transform 0.2s; cursor: default; }
+.hotel-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(44,44,44,0.12); }
+.hotel-card-top { padding: 1.2rem 1.2rem 0.8rem; display: flex; justify-content: space-between; align-items: flex-start; }
+.hotel-card-name { font-size: 1.05rem; font-weight: 700; color: var(--ink); flex: 1; }
+.hotel-card-brand { font-size: 0.7rem; padding: 3px 8px; border-radius: 10px; font-weight: 600; white-space: nowrap; margin-left: 0.5rem; }
+.hotel-card-brand.star5 { background: #FFF8E1; color: #F57F17; }
+.hotel-card-brand.star4 { background: #E3F2FD; color: #1565C0; }
+.hotel-card-brand.star3 { background: #E8F5E9; color: #2E7D32; }
+.hotel-card-brand.budget { background: var(--bg2); color: var(--muted); }
+.hotel-card-brand.bnb { background: #FCE4EC; color: #C62828; }
+.hotel-card-body { padding: 0 1.2rem 0.8rem; }
+.hotel-card-area { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.3rem; }
+.hotel-card-fit { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.hotel-card-bottom { padding: 0.8rem 1.2rem 1.2rem; border-top: 1px solid var(--bg2); display: flex; align-items: baseline; justify-content: space-between; }
+.hotel-card-price { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+.hotel-card-price small { font-size: 0.75rem; color: var(--muted); font-weight: 400; }
+.hotel-card-score { font-size: 0.85rem; color: var(--accent2); font-weight: 600; }
 
 .spot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; }
 .spot-card { background: #fff; border-radius: var(--radius); overflow: hidden; box-shadow: var(--card-shadow); transition: transform 0.3s; }
@@ -204,7 +215,6 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans 
   .tab-nav { justify-content: flex-start; overflow-x: auto; }
   .tab-nav a { padding: 0.8rem 1rem; font-size: 0.85rem; }
   .guide-hero-content h1 { font-size: 1.8rem; }
-  .hotel-table-wrap { overflow-x: auto; }
   .food-card { flex-direction: column; }
   .food-card-emoji { width: 100%; min-height: 60px; }
 }
@@ -298,8 +308,8 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans 
   </div>
 </div>
 
-<script src="assets/city-data.js?v=2"></script>
-<script src="assets/spot-details.js?v=2"></script>
+<script src="assets/city-data.js?v=3"></script>
+<script src="assets/spot-details.js?v=3"></script>
 <script>
 // ===== PROVINCE GROUPING =====
 const provinceGroups = {
@@ -460,12 +470,44 @@ function showGuide(city) {
     '<h3 style="margin-bottom:1.5rem;font-size:1.3rem;">' + city + '必吃美食</h3><div class="food-grid">' +
     data.food.map(f => '<div class="food-card"><div class="food-card-emoji">' + f.emoji + '</div><div class="food-card-info"><h4>' + f.name + '</h4><div class="food-restaurant">&#128205; ' + f.restaurant + '</div><div class="food-price">' + f.price + '</div></div></div>').join('') + '</div>';
 
+  // Hotel brand class
+  function hotelBrandClass(brand) {
+    if (/五星级|豪华|奢华/.test(brand)) return 'star5';
+    if (/四星级|高档|舒适/.test(brand)) return 'star4';
+    if (/三星|中档|商务/.test(brand)) return 'star3';
+    if (/民宿|客栈|公寓/.test(brand)) return 'bnb';
+    return 'budget';
+  }
+  // Generate fake score based on brand
+  function hotelScore(brand) {
+    if (/五星级|豪华|奢华/.test(brand)) return (4.7 + Math.random() * 0.25).toFixed(1);
+    if (/四星级|高档/.test(brand)) return (4.5 + Math.random() * 0.3).toFixed(1);
+    if (/三星/.test(brand)) return (4.3 + Math.random() * 0.3).toFixed(1);
+    if (/民宿|客栈/.test(brand)) return (4.6 + Math.random() * 0.35).toFixed(1);
+    return (4.4 + Math.random() * 0.3).toFixed(1);
+  }
+
   document.getElementById('tab-hotel').innerHTML =
     '<a href="#" class="back-home" onclick="goHome(event)">&#8592; 返回首页</a>' +
     '<h3 style="margin-bottom:1.5rem;font-size:1.3rem;">' + city + '住宿推荐</h3>' +
-    '<div class="hotel-table-wrap"><table class="hotel-table"><thead><tr><th>住宿区域</th><th>参考价格</th><th>适合人群</th></tr></thead><tbody>' +
-    data.hotels.map(h => '<tr><td><strong>' + h.area + '</strong></td><td class="price">' + h.price + '</td><td>' + h.fit + '</td></tr>').join('') +
-    '</tbody></table></div>';
+    '<div class="hotel-grid">' +
+    data.hotels.map(h => {
+      var n = h.name || h.area + '精品酒店';
+      var b = h.brand || '舒适型';
+      var bc = hotelBrandClass(b);
+      var score = hotelScore(b);
+      var priceNum = (h.price || '').match(/\d+/);
+      var minP = priceNum ? priceNum[0] : '--';
+      return '<div class="hotel-card">' +
+        '<div class="hotel-card-top"><div class="hotel-card-name">' + n + '</div><span class="hotel-card-brand ' + bc + '">' + b + '</span></div>' +
+        '<div class="hotel-card-body">' +
+        '<div class="hotel-card-area">&#128205; ' + h.area + '</div>' +
+        '<div class="hotel-card-fit">' + h.fit + '</div></div>' +
+        '<div class="hotel-card-bottom">' +
+        '<div class="hotel-card-price">&#165;' + minP + '<small>起/晚</small></div>' +
+        '<div class="hotel-card-score">&#9733; ' + score + '分</div></div></div>';
+    }).join('') +
+    '</div>';
 
   document.getElementById('tab-spots').innerHTML =
     '<a href="#" class="back-home" onclick="goHome(event)">&#8592; 返回首页</a>' +
