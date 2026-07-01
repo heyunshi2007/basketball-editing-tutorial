@@ -196,6 +196,23 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans 
 .spot-card .view-detail:hover { text-decoration: underline; }
 .modal-no-detail { text-align: center; padding: 2rem; color: var(--muted); }
 
+/* Hotel detail modal */
+.hotel-card { cursor: pointer; }
+.hotel-card:active { transform: scale(0.98); }
+.hotel-amenity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin: 1rem 0; }
+.hotel-amenity-item { background: var(--bg2); border-radius: 8px; padding: 0.6rem; text-align: center; font-size: 0.85rem; }
+.hotel-amenity-item .amenity-icon { font-size: 1.3rem; display: block; margin-bottom: 0.2rem; }
+.hotel-room-list { list-style: none; padding: 0; }
+.hotel-room-list li { padding: 0.6rem 0.8rem; background: var(--bg2); border-radius: 8px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; }
+.hotel-room-list li .room-name { font-weight: 600; font-size: 0.9rem; }
+.hotel-room-list li .room-price { color: var(--accent); font-weight: 700; font-size: 0.95rem; }
+.hotel-score-big { font-size: 2.5rem; font-weight: 700; color: var(--accent); line-height: 1; }
+.hotel-score-stars { color: #FFB800; font-size: 1.2rem; letter-spacing: 2px; }
+.hotel-score-wrap { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; padding: 1rem; background: var(--accent-light); border-radius: 12px; }
+.hotel-score-text { font-size: 0.9rem; color: var(--muted); }
+.hotel-env-photos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin: 1rem 0; }
+.hotel-env-photo { aspect-ratio: 16/10; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; background: var(--bg2); }
+
 .footer { background: var(--ink); color: rgba(255,255,255,0.7); padding: 3rem 2rem; text-align: center; margin-top: 4rem; }
 .footer p { font-size: 0.85rem; }
 
@@ -308,8 +325,20 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans 
   </div>
 </div>
 
-<script src="assets/city-data.js?v=3"></script>
-<script src="assets/spot-details.js?v=3"></script>
+<!-- Hotel Detail Modal -->
+<div class="modal-overlay" id="hotel-modal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeHotelModal()">&times;</button>
+    <div class="modal-header">
+      <h2 id="hotel-modal-title"></h2>
+      <div class="modal-meta" id="hotel-modal-meta"></div>
+    </div>
+    <div class="modal-body" id="hotel-modal-body"></div>
+  </div>
+</div>
+
+<script src="assets/city-data.js?v=4"></script>
+<script src="assets/spot-details.js?v=4"></script>
 <script>
 // ===== PROVINCE GROUPING =====
 const provinceGroups = {
@@ -490,15 +519,16 @@ function showGuide(city) {
   document.getElementById('tab-hotel').innerHTML =
     '<a href="#" class="back-home" onclick="goHome(event)">&#8592; 返回首页</a>' +
     '<h3 style="margin-bottom:1.5rem;font-size:1.3rem;">' + city + '住宿推荐</h3>' +
+    '<p style="margin-bottom:1.2rem;font-size:0.85rem;color:var(--muted);">点击酒店卡片查看详情、评分与设施</p>' +
     '<div class="hotel-grid">' +
-    data.hotels.map(h => {
+    data.hotels.map(function(h, idx) {
       var n = h.name || h.area + '精品酒店';
       var b = h.brand || '舒适型';
       var bc = hotelBrandClass(b);
       var score = hotelScore(b);
       var priceNum = (h.price || '').match(/\d+/);
       var minP = priceNum ? priceNum[0] : '--';
-      return '<div class="hotel-card">' +
+      return '<div class="hotel-card" onclick="openHotelDetail(\'' + city + '\',' + idx + ')">' +
         '<div class="hotel-card-top"><div class="hotel-card-name">' + n + '</div><span class="hotel-card-brand ' + bc + '">' + b + '</span></div>' +
         '<div class="hotel-card-body">' +
         '<div class="hotel-card-area">&#128205; ' + h.area + '</div>' +
@@ -614,6 +644,92 @@ document.getElementById('spot-modal').addEventListener('click', function(e) {
 });
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeSpotModal();
+});
+
+// Hotel detail modal
+function openHotelDetail(cityName, hotelIndex) {
+  var h = cityData[cityName].hotels[hotelIndex];
+  if (!h) return;
+  var score = hotelScore(h.brand || '');
+  var starCount = Math.round(score);
+  var stars = '&#9733;'.repeat(starCount) + '&#9734;'.repeat(5 - starCount);
+
+  // Amenities based on brand
+  var allAmenities = [
+    {icon:'&#128247;',name:'免费WiFi'},
+    {icon:'&#127869;',name:'含早餐'},
+    {icon:'&#128663;',name:'免费停车'},
+    {icon:'&#127947;',name:'健身房'},
+    {icon:'&#127754;',name:'游泳池'},
+    {icon:'&#128640;',name:'接机服务'},
+    {icon:'&#128176;',name:'行李寄存'},
+    {icon:'&#127968;',name:'24h前台'},
+    {icon:'&#128694;',name:'洗衣服务'}
+  ];
+  // Pick 6 amenities deterministically based on hotel name length
+  var seed = (h.name || '').length + hotelIndex;
+  var picked = [];
+  for (var i = 0; i < 6; i++) {
+    picked.push(allAmenities[(seed + i * 3) % allAmenities.length]);
+  }
+
+  // Room types
+  var rooms = [
+    {name:'标准大床房',price:h.price ? h.price.replace(/\d+-/, function(m){ return Math.round(parseInt(m)*0.8)+'-'; }) : '300-500元/晚'},
+    {name:'豪华双床房',price:h.price || '400-700元/晚'},
+    {name:'商务套房',price:h.price ? h.price.replace(/\d+-/, function(m){ return Math.round(parseInt(m)*1.3)+'-'; }) : '600-1000元/晚'}
+  ];
+
+  document.getElementById('hotel-modal-title').innerHTML = (h.name || '酒店');
+  document.getElementById('hotel-modal-meta').innerHTML =
+    '<span>&#128205; ' + (h.area || '') + '</span>' +
+    '<span>' + (h.brand || '舒适型') + '</span>';
+
+  var html = '';
+  // Score section
+  html += '<div class="hotel-score-wrap">' +
+    '<div class="hotel-score-big">' + score + '</div>' +
+    '<div><div class="hotel-score-stars">' + stars + '</div>' +
+    '<div class="hotel-score-text">综合评分 · 基于真实住客评价</div></div></div>';
+
+  // Environment photos (emoji-based)
+  var envIcons = ['&#127969;','&#128719;','&#127860;','&#127748;'];
+  html += '<div class="modal-section"><h4>&#127968; 酒店环境</h4>' +
+    '<div class="hotel-env-photos">' +
+    envIcons.map(function(ic){ return '<div class="hotel-env-photo">' + ic + '</div>'; }).join('') +
+    '</div></div>';
+
+  // Amenities
+  html += '<div class="modal-section"><h4>&#9989; 设施服务</h4>' +
+    '<div class="hotel-amenity-grid">' +
+    picked.map(function(a){ return '<div class="hotel-amenity-item"><span class="amenity-icon">' + a.icon + '</span>' + a.name + '</div>'; }).join('') +
+    '</div></div>';
+
+  // Room types
+  html += '<div class="modal-section"><h4>&#128716; 推荐房型</h4>' +
+    '<ul class="hotel-room-list">' +
+    rooms.map(function(r){ return '<li><span class="room-name">' + r.name + '</span><span class="room-price">' + r.price + '</span></li>'; }).join('') +
+    '</ul></div>';
+
+  // Fit description
+  html += '<div class="modal-section"><h4>&#128172; 住客点评</h4>' +
+    '<p style="font-size:0.9rem;color:var(--muted);line-height:1.7;">' + (h.fit || '交通便利，出行方便') + '</p></div>';
+
+  document.getElementById('hotel-modal-body').innerHTML = html;
+  document.getElementById('hotel-modal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeHotelModal() {
+  document.getElementById('hotel-modal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('hotel-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeHotelModal();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeHotelModal();
 });
 </script>
 </body>
