@@ -337,8 +337,8 @@ body { font-family: -apple-system, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans 
   </div>
 </div>
 
-<script src="assets/city-data.js?v=4"></script>
-<script src="assets/spot-details.js?v=4"></script>
+<script src="assets/city-data.js?v=5"></script>
+<script src="assets/spot-details.js?v=5"></script>
 <script>
 // ===== PROVINCE GROUPING =====
 const provinceGroups = {
@@ -464,6 +464,22 @@ provinceList.addEventListener('click', function(e) {
   }
 });
 
+// Hotel helpers (global)
+function hotelBrandClass(brand) {
+  if (/五星级|豪华|奢华/.test(brand)) return 'star5';
+  if (/四星级|高档|舒适/.test(brand)) return 'star4';
+  if (/三星|中档|商务/.test(brand)) return 'star3';
+  if (/民宿|客栈|公寓/.test(brand)) return 'bnb';
+  return 'budget';
+}
+function hotelScore(brand) {
+  if (/五星级|豪华|奢华/.test(brand)) return (4.7 + Math.random() * 0.25).toFixed(1);
+  if (/四星级|高档/.test(brand)) return (4.5 + Math.random() * 0.3).toFixed(1);
+  if (/三星/.test(brand)) return (4.3 + Math.random() * 0.3).toFixed(1);
+  if (/民宿|客栈/.test(brand)) return (4.6 + Math.random() * 0.35).toFixed(1);
+  return (4.4 + Math.random() * 0.3).toFixed(1);
+}
+
 // ===== SHOW GUIDE =====
 function showGuide(city) {
   const data = cityData[city];
@@ -498,23 +514,6 @@ function showGuide(city) {
     '<a href="#" class="back-home" onclick="goHome(event)">&#8592; 返回首页</a>' +
     '<h3 style="margin-bottom:1.5rem;font-size:1.3rem;">' + city + '必吃美食</h3><div class="food-grid">' +
     data.food.map(f => '<div class="food-card"><div class="food-card-emoji">' + f.emoji + '</div><div class="food-card-info"><h4>' + f.name + '</h4><div class="food-restaurant">&#128205; ' + f.restaurant + '</div><div class="food-price">' + f.price + '</div></div></div>').join('') + '</div>';
-
-  // Hotel brand class
-  function hotelBrandClass(brand) {
-    if (/五星级|豪华|奢华/.test(brand)) return 'star5';
-    if (/四星级|高档|舒适/.test(brand)) return 'star4';
-    if (/三星|中档|商务/.test(brand)) return 'star3';
-    if (/民宿|客栈|公寓/.test(brand)) return 'bnb';
-    return 'budget';
-  }
-  // Generate fake score based on brand
-  function hotelScore(brand) {
-    if (/五星级|豪华|奢华/.test(brand)) return (4.7 + Math.random() * 0.25).toFixed(1);
-    if (/四星级|高档/.test(brand)) return (4.5 + Math.random() * 0.3).toFixed(1);
-    if (/三星/.test(brand)) return (4.3 + Math.random() * 0.3).toFixed(1);
-    if (/民宿|客栈/.test(brand)) return (4.6 + Math.random() * 0.35).toFixed(1);
-    return (4.4 + Math.random() * 0.3).toFixed(1);
-  }
 
   document.getElementById('tab-hotel').innerHTML =
     '<a href="#" class="back-home" onclick="goHome(event)">&#8592; 返回首页</a>' +
